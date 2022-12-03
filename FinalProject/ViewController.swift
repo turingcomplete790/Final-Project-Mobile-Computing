@@ -6,73 +6,80 @@
 //
 
 import UIKit
-import AVFoundation
+import AVKit
+import SoundAnalysis
 
 class ViewController: UIViewController {
-    var audioSession: AVAudioSession!
-    var audioRecorder: AVAudioRecorder!
+    private func convert(id: String) -> String {
+        let mapping = ["cel" : "drum", "cla" : "clarinet", "flu" : "flute",
+                       "gac" : "acoustic guitar", "gel" : "electric guitar",
+                       "org" : "organ", "pia" : "piano", "sax" : "saxophone",
+                       "tru" : "trumpet", "vio" : "violin", "voi" : "human voice"]
+        return mapping[id] ?? id
+    }
     @IBOutlet weak var statusInfo: UILabel!
     @IBOutlet weak var PlayButton: UIButton!
     @IBOutlet weak var TimeStamp: UILabel!
     @IBOutlet weak var StopButton: UIButton!
-    @IBOutlet weak var RecordButton: UIButton!
-    let paths = FileManager.default.urls(for:.documentDirectory, in: .userDomainMask)
+    private let audioEngine = AVAudioEngine()
+    private var soundClassifier = MySoundClassifier()
+    var streamAnalyzer: SNAudioStreamAnalyzer!
+    let queue = DispatchQueue(label: "com.zackashour.FinalProject")
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        audioSession = AVAudioSession.sharedInstance()
-        do{
-            try audioSession.setCategory(.playAndRecord, mode: .default)
-            try audioSession.setActive(true)
-            audioSession.requestRecordPermission(){[unowned self] allowed in DispatchQueue.main.async {
-                if allowed{
-                    self.setupUI()
-                }
-                else {
-                    self.statusInfo.text = "Could not start session"
-                }
-            }}
-            // Do any additional setup after loading the view.
-        }catch{
-            statusInfo.text = "Could not record permission error"
-        }
     }
-    func setupUI(){
-        RecordButton.addTarget(self, action: #selector(recordPressed), for: .touchUpInside)
-    }
-    @objc func recordPressed(){
-        statusInfo.text = "Recording has started"
-        if audioRecorder == nil {
-            recordingStarted()
+    
+    private func prepareForRecording() {
+        let inputNode = audioEngine.inputNode
+        let recordingFormat = inputNode.outputFormat(forBus: 0)
+        streamAnalyzer = SNAudioStreamAnalyzer(format: recordingFormat)
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) {
+            [unowned self] (buffer, when) in
+            self.queue.async {
+                self.streamAnalyzer.analyze(buffer,
+                                            atAudioFramePosition: when.sampleTime)
+            }
         }
-        else {
-            recordingStopped(success: true)
+        audioEngine.prepare()
+        do {
+            try audioEngine.start()
+        } catch {
+            statusInfo.text = "Error in starting Audio Engine"
         }
     }
     
-    func recordingStarted(){
-        let current_directory = paths[0]
-        let fileName = current_directory.appendingPathComponent("recording.m4a")
-        let settings = [
-            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 12000,
-            AVNumberOfChannelsKey: 1,
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-        ]
+    private func createClassificationRequest() {
         do {
-            audioRecorder = try AVAudioRecorder(url:fileName,settings:settings)
-        }catch{
-            recordingStopped(success: false)
+            let request = try SNClassifySoundRequest(mlModel: soundClassifier.model)
+            try streamAnalyzer.add(request, withObserver: self)
+        } catch {
+            statusInfo.text = "Failed to start classifer"
         }
     }
-    func recordingStopped(success: Bool){
-        audioRecorder.stop()
-        audioRecorder = nil
-        if success{
-            statusInfo.text = "Not Currently Recording"
+    
+    @IBAction func RecordButton(_ sender: UIButton) {
+        prepareForRecording()
+        createClassificationRequest()
+    }
+
+}
+
+
+extension ViewController: SNResultsObserving {
+    func request(_ request: SNRequest, didProduce result: SNResult) {
+        guard let result = result as? SNClassificationResult else { return }
+        var temp = [(label: String, confidence: Float)]()
+        let sorted = result.classifications.sorted { (first, second) -> Bool in
+            return first.confidence > second.confidence
         }
-        else {
-            statusInfo.text = "Recording Failed"
+        for classification in sorted {
+            let confidence = classification.confidence * 100
+            if confidence > 5 {
+                temp.append((label: classification.identifier, confidence: Float(confidence)))
+            }
         }
+        print(temp)
     }
 }
 
