@@ -8,8 +8,20 @@
 import UIKit
 import AVKit
 import SoundAnalysis
+import Foundation
 
-class ViewController: UIViewController {
+class ViewController: UIViewController,UITableViewDelegate, UITableViewDataSource {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.instrumentArray.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        // create a new cell if needed or reuse an old one
+        let cell =  UITableViewCell(style: .default, reuseIdentifier: nil)
+              cell.textLabel?.text = instrumentArray[indexPath.row]
+              return cell
+    }
+    
     private func convert(id: String) -> String {
         let mapping = ["cel" : "drum", "cla" : "clarinet", "flu" : "flute",
                        "gac" : "acoustic guitar", "gel" : "electric guitar",
@@ -17,17 +29,24 @@ class ViewController: UIViewController {
                        "tru" : "trumpet", "vio" : "violin", "voi" : "human voice"]
         return mapping[id] ?? id
     }
+    //declare blank timer variable
+    var timer = Timer()
+    //let CellIdentifier = "com.zackashour.FinalProject"
+    var instumentSet = Set<String>()
+    var instrumentArray = [String]()
+    @IBOutlet weak var instrumentTable: UITableView!
     @IBOutlet weak var statusInfo: UILabel!
     @IBOutlet weak var PlayButton: UIButton!
     @IBOutlet weak var TimeStamp: UILabel!
     @IBOutlet weak var StopButton: UIButton!
     private let audioEngine = AVAudioEngine()
-    private var soundClassifier = MySoundClassifier()
+    private var soundClassifier = InstrumentClassifier()
     var streamAnalyzer: SNAudioStreamAnalyzer!
     let queue = DispatchQueue(label: "com.zackashour.FinalProject")
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        instrumentTable.dataSource = self
     }
     
     private func prepareForRecording() {
@@ -58,10 +77,25 @@ class ViewController: UIViewController {
         }
     }
     
-    @IBAction func RecordButton(_ sender: UIButton) {
+    
+    @IBAction func recordButton(_ sender: Any) {
+        statusInfo.text = "Recording and Analyzing Audio"
         prepareForRecording()
         createClassificationRequest()
+        timer = Timer.scheduledTimer(timeInterval: 10.0, target: self, selector: #selector(timerAction), userInfo: nil, repeats: false)
     }
+    
+    //new function
+    @objc func timerAction(){
+         audioEngine.stop()
+         audioEngine.inputNode.removeTap(onBus: 0)
+        statusInfo.text = "Recording Stopped"
+        print(instumentSet)
+        for instr in instumentSet{
+            instrumentArray.append(convert(id:instr))
+        }
+        instrumentTable.reloadData()
+        }
 
 }
 
@@ -79,7 +113,12 @@ extension ViewController: SNResultsObserving {
                 temp.append((label: classification.identifier, confidence: Float(confidence)))
             }
         }
-        print(temp)
+        //print(temp)
+        let label = temp[0].0
+        let conf = temp[0].1
+        if (conf > 0.6){
+            instumentSet.insert(label)
+        }
     }
 }
 

@@ -16,6 +16,7 @@
 		B446745F29315FD7004E5A67 /* FinalProjectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B446745E29315FD7004E5A67 /* FinalProjectTests.swift */; };
 		B446746929315FD7004E5A67 /* FinalProjectUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B446746829315FD7004E5A67 /* FinalProjectUITests.swift */; };
 		B446746B29315FD7004E5A67 /* FinalProjectUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B446746A29315FD7004E5A67 /* FinalProjectUITestsLaunchTests.swift */; };
+		B486FAD8293B069F00C50BD4 /* InstrumentClassifier.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = B486FAD7293B069F00C50BD4 /* InstrumentClassifier.mlmodel */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +50,7 @@
 		B446746429315FD7004E5A67 /* FinalProjectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FinalProjectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B446746829315FD7004E5A67 /* FinalProjectUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinalProjectUITests.swift; sourceTree = "<group>"; };
 		B446746A29315FD7004E5A67 /* FinalProjectUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinalProjectUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		B486FAD7293B069F00C50BD4 /* InstrumentClassifier.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; name = InstrumentClassifier.mlmodel; path = ../../../../Downloads/InstrumentClassifier.mlmodel; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +101,7 @@
 		B446744629315FD6004E5A67 /* FinalProject */ = {
 			isa = PBXGroup;
 			children = (
+				B486FAD7293B069F00C50BD4 /* InstrumentClassifier.mlmodel */,
 				B446744729315FD6004E5A67 /* AppDelegate.swift */,
 				B446744929315FD6004E5A67 /* SceneDelegate.swift */,
 				B446744B29315FD6004E5A67 /* ViewController.swift */,
@@ -260,6 +263,7 @@
 			files = (
 				B446744C29315FD6004E5A67 /* ViewController.swift in Sources */,
 				B446744829315FD6004E5A67 /* AppDelegate.swift in Sources */,
+				B486FAD8293B069F00C50BD4 /* InstrumentClassifier.mlmodel in Sources */,
 				B446744A29315FD6004E5A67 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
