@@ -23,15 +23,13 @@ class ViewController: UIViewController,UITableViewDelegate, UITableViewDataSourc
     }
     
     private func convert(id: String) -> String {
-        let mapping = ["cel" : "drum", "cla" : "clarinet", "flu" : "flute",
+        let instrument_mapping = ["cel" : "drum", "cla" : "clarinet", "flu" : "flute",
                        "gac" : "acoustic guitar", "gel" : "electric guitar",
                        "org" : "organ", "pia" : "piano", "sax" : "saxophone",
                        "tru" : "trumpet", "vio" : "violin", "voi" : "human voice"]
-        return mapping[id] ?? id
+        return instrument_mapping[id] ?? id
     }
-    //declare blank timer variable
     var timer = Timer()
-    //let CellIdentifier = "com.zackashour.FinalProject"
     var instumentSet = Set<String>()
     var instrumentArray = [String]()
     @IBOutlet weak var instrumentTable: UITableView!
@@ -40,8 +38,16 @@ class ViewController: UIViewController,UITableViewDelegate, UITableViewDataSourc
     @IBOutlet weak var TimeStamp: UILabel!
     @IBOutlet weak var StopButton: UIButton!
     private let audioEngine = AVAudioEngine()
-    private var soundClassifier = InstrumentClassifier()
-    var streamAnalyzer: SNAudioStreamAnalyzer!
+    let insturmentClassifier: InstrumentClassifier = {
+    do {
+        let config = MLModelConfiguration()
+        return try InstrumentClassifier(configuration: config)
+    } catch {
+        print(error)
+        fatalError("Couldn't initalize model")
+    }
+    }()
+    var audioAnalyzer: SNAudioStreamAnalyzer!
     let queue = DispatchQueue(label: "com.zackashour.FinalProject")
 
     override func viewDidLoad() {
@@ -50,13 +56,13 @@ class ViewController: UIViewController,UITableViewDelegate, UITableViewDataSourc
     }
     
     private func prepareForRecording() {
-        let inputNode = audioEngine.inputNode
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
-        streamAnalyzer = SNAudioStreamAnalyzer(format: recordingFormat)
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) {
+        let iNode = audioEngine.inputNode
+        let rFormat = iNode.outputFormat(forBus: 0)
+        audioAnalyzer = SNAudioStreamAnalyzer(format: rFormat)
+        iNode.installTap(onBus: 0, bufferSize: 1024, format: rFormat) {
             [unowned self] (buffer, when) in
             self.queue.async {
-                self.streamAnalyzer.analyze(buffer,
+                self.audioAnalyzer.analyze(buffer,
                                             atAudioFramePosition: when.sampleTime)
             }
         }
@@ -70,10 +76,10 @@ class ViewController: UIViewController,UITableViewDelegate, UITableViewDataSourc
     
     private func createClassificationRequest() {
         do {
-            let request = try SNClassifySoundRequest(mlModel: soundClassifier.model)
-            try streamAnalyzer.add(request, withObserver: self)
+            let request = try SNClassifySoundRequest(mlModel: insturmentClassifier.model)
+            try audioAnalyzer.add(request, withObserver: self)
         } catch {
-            statusInfo.text = "Failed to start classifer"
+            statusInfo.text = "Failed to start classifer."
         }
     }
     
@@ -101,24 +107,22 @@ class ViewController: UIViewController,UITableViewDelegate, UITableViewDataSourc
 
 
 extension ViewController: SNResultsObserving {
+    
     func request(_ request: SNRequest, didProduce result: SNResult) {
-        guard let result = result as? SNClassificationResult else { return }
-        var temp = [(label: String, confidence: Float)]()
-        let sorted = result.classifications.sorted { (first, second) -> Bool in
-            return first.confidence > second.confidence
-        }
-        for classification in sorted {
-            let confidence = classification.confidence * 100
-            if confidence > 5 {
-                temp.append((label: classification.identifier, confidence: Float(confidence)))
-            }
-        }
-        //print(temp)
-        let label = temp[0].0
-        let conf = temp[0].1
-        if (conf > 0.6){
+        guard let result = result as? SNClassificationResult,
+        let current_classification = result.classifications.first else { return }
+        let confidence = current_classification.confidence * 100.0
+        if confidence > 5 {
+            let label = current_classification.identifier
+            let conf = Float(current_classification.confidence)
             instumentSet.insert(label)
         }
+        
+        //let label = current_label[0].0
+        //let conf = current_label[0].1
+//        if (conf > 0.6){
+//            instumentSet.insert(label)
+//        }
     }
 }
 
